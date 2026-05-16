@@ -206,14 +206,27 @@
         return String.fromCodePoint(...c.toUpperCase().split('').map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65));
     }
     function v(x) { return (x != null && x !== '') ? x : '—'; }
+    
+    function showDbError() {
+        document.getElementById('loadingBlock').innerHTML = `
+            <div style="font-size:1.5rem;margin-bottom:12px;">⚠️</div>
+            <div style="font-weight:700;font-size:1rem;margin-bottom:8px;color:#fca5a5;">GeoLite2 データベース未ロード</div>
+            <div style="font-size:0.85rem;color:#94a3b8;margin-bottom:16px;">
+                サーバーに <code style="background:#1e293b;padding:2px 6px;border-radius:4px;">GEOLITE2_LICENSE_KEY</code> が設定されていないため、<br>IP 地域データを利用できません。
+            </div>
+            <a href="/" style="color:#60a5fa;font-size:0.85rem;text-decoration:none;">← トップへ戻る</a>
+        `;
+        document.getElementById('headerTitle').textContent = 'DB未ロード';
+    }
 
     async function pollUntilReady() {
         while (true) {
             try {
                 const s = await fetch('/api/city-explore/status').then(r => r.json());
+                if (!s.dbLoaded) { showDbError(); return false; }
                 document.getElementById('progressBar').style.width = s.progress + '%';
                 document.getElementById('loadingMsg').textContent = `GeoLite2-City をスキャン中... ${s.progress}%`;
-                if (s.ready) return;
+                if (s.ready) return true;
             } catch(e) {}
             await new Promise(r => setTimeout(r, 800));
         }
@@ -221,9 +234,10 @@
 
     async function init() {
         const status = await fetch('/api/city-explore/status').then(r => r.json()).catch(() => null);
+        if (status && !status.dbLoaded) { showDbError(); return; }
         if (status && !status.ready) {
-            await pollUntilReady();
-        }
+            const ok = await pollUntilReady();
+            if (!ok) return;
 
         const res = await fetch(`/api/city-explore/country/${code}`);
         if (!res.ok) {
