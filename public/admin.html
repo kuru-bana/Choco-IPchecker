@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>管理者 — Choco-ip 位置情報チェッカー</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            padding: 40px 24px;
+        }
+
+        .top-bar {
+            width: 100%;
+            max-width: 640px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .back-link {
+            color: #64748b;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #94a3b8; }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 28px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 14px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .status-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 12px 14px;
+        }
+
+        .status-item.full { grid-column: 1 / -1; }
+
+        .status-label {
+            color: #64748b;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-bottom: 5px;
+        }
+
+        .status-value {
+            color: #e2e8f0;
+            font-size: 0.88rem;
+            font-weight: 500;
+        }
+
+        .refresh-btn {
+            margin-top: 12px;
+            background: transparent;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #64748b;
+            cursor: pointer;
+            font-size: 0.8rem;
+            padding: 7px 14px;
+            transition: border-color 0.2s, color 0.2s;
+        }
+        .refresh-btn:hover { border-color: #475569; color: #94a3b8; }
+
+        .input-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+
+        input[type="password"] {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 10px;
+            color: #e2e8f0;
+            font-size: 0.95rem;
+            padding: 12px 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        input[type="password"]:focus { border-color: #60a5fa; }
+        input[type="password"]::placeholder { color: #475569; }
+
+        .btn-update {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 12px 22px;
+            white-space: nowrap;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        .btn-update:hover { opacity: 0.9; }
+        .btn-update:active { transform: scale(0.98); }
+        .btn-update:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .progress-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px 16px;
+            font-size: 0.82rem;
+            font-family: 'Courier New', monospace;
+            display: none;
+            flex-direction: column;
+            gap: 4px;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .progress-box.visible { display: flex; }
+
+        .log-line        { color: #94a3b8; }
+        .log-line.info   { color: #60a5fa; }
+        .log-line.success{ color: #86efac; }
+        .log-line.error  { color: #fca5a5; }
+        .log-line.divider{ color: #334155; }
+
+        .spinner {
+            display: inline-block;
+            width: 13px;
+            height: 13px;
+            border: 2px solid #334155;
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            vertical-align: middle;
+            margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .badge-ok   { color: #86efac; }
+        .badge-fail { color: #fca5a5; }
+        .ping-note  { color: #475569; font-size: 0.75rem; }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <a href="/" class="back-link">← 戻る</a>
+        <h1>サーバー状態</h1>
+        <div style="width:48px;"></div>
+    </div>
+
+    <div class="card" style="padding:18px 28px;">
+        <a href="/db-info" style="display:flex;align-items:center;justify-content:space-between;text-decoration:none;">
+            <div style="display:flex;align-items:center;gap:10px;">
+                <span style="font-size:1.1rem;">🗄️</span>
+                <div>
+                    <div style="color:#94a3b8;font-size:0.88rem;font-weight:600;">データベース情報</div>
+                    <div style="color:#475569;font-size:0.75rem;margin-top:2px;">GeoLite2-City / ASN のメタデータ・統計</div>
+                </div>
+            </div>
+            <span style="color:#475569;">→</span>
+        </a>
+    </div>
+
+    <div class="card">
+        <div class="card-title">サーバーステータス</div>
+        <div class="status-grid" id="statusGrid">
+            <div class="status-item full">
+                <div class="status-label">読み込み中</div>
+                <div class="status-value" style="color:#64748b;">...</div>
+            </div>
+        </div>
+        <button class="refresh-btn" onclick="loadStatus()">↻ 再読み込み</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">DB 手動更新</div>
+        <div class="input-row">
+            <input type="password" id="adminPassword" placeholder="管理者パスワードを入力"
+                onkeydown="if(event.key==='Enter') triggerUpdate()" />
+            <button class="btn-update" id="updateBtn" onclick="triggerUpdate()">更新実行</button>
+        </div>
+        <div class="progress-box" id="progressBox"></div>
+    </div>
+
+    <script>
+        function formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleString('ja-JP', {
+                timeZone: 'Asia/Tokyo',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        async function loadStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const s = await res.json();
+                document.getElementById('statusGrid').innerHTML = `
+                    <div class="status-item">
+                        <div class="status-label">稼働時間</div>
+                        <div class="status-value">${s.uptime}</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">自己 Ping</div>
+                        <div class="status-value">${s.ping_count} 回 <span class="ping-note">（${s.ping_interval_minutes}分ごと）</span></div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">DB 最終更新</div>
+                        <div class="status-value">${s.db_last_updated_at ? formatDate(s.db_last_updated_at) : '<span style="color:#64748b;">起動時のまま</span>'}</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-label">次回 DB 更新</div>
+                        <div class="status-value">${formatDate(s.db_next_update_at)}</div>
+                    </div>
+                    <div class="status-item full">
+                        <div class="status-label">データベース</div>
+                        <div class="status-value">
+                            <span class="${s.db_city_loaded ? 'badge-ok' : 'badge-fail'}">${s.db_city_loaded ? '✅' : '❌'} GeoLite2-City</span>
+                            &nbsp;&nbsp;
+                            <span class="${s.db_asn_loaded ? 'badge-ok' : 'badge-fail'}">${s.db_asn_loaded ? '✅' : '❌'} GeoLite2-ASN</span>
+                        </div>
+                    </div>
+                `;
+            } catch {
+                document.getElementById('statusGrid').innerHTML =
+                    '<div class="status-item full"><div class="status-label">エラー</div><div class="status-value" style="color:#fca5a5;">取得に失敗しました</div></div>';
+            }
+        }
+
+        function addLog(text, type) {
+            const box = document.getElementById('progressBox');
+            const line = document.createElement('div');
+            line.className = 'log-line' + (type ? ' ' + type : '');
+            line.textContent = text;
+            box.appendChild(line);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function triggerUpdate() {
+            const password = document.getElementById('adminPassword').value;
+            const btn = document.getElementById('updateBtn');
+            const box = document.getElementById('progressBox');
+
+            if (!password) {
+                box.className = 'progress-box visible';
+                box.innerHTML = '';
+                addLog('⚠️ パスワードを入力してください', 'error');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span>確認中...';
+            box.className = 'progress-box visible';
+            box.innerHTML = '';
+
+            const verify = await fetch('/api/admin/verify', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
+            });
+            if (!verify.ok) {
+                const data = await verify.json();
+                addLog('⚠️ ' + (data.error || 'パスワードが正しくありません'), 'error');
+                btn.disabled = false;
+                btn.textContent = '更新実行';
+                return;
+            }
+
+            btn.innerHTML = '<span class="spinner"></span>更新中...';
+            addLog('DB更新を開始します...', 'info');
+
+            try {
+                const response = await fetch('/api/admin/update-db-stream', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ password })
+                });
+
+                if (!response.ok) {
+                    addLog('❌ ストリーム接続エラー: HTTP ' + response.status, 'error');
+                    btn.disabled = false;
+                    btn.textContent = '更新実行';
+                    return;
+                }
+
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buf = '';
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    buf += decoder.decode(value, { stream: true });
+                    const lines = buf.split('\n');
+                    buf = lines.pop();
+                    for (const line of lines) {
+                        if (!line.startsWith('data:')) continue;
+                        const data = JSON.parse(line.slice(5).trim());
+                        if (data.done) {
+                            document.getElementById('adminPassword').value = '';
+                            addLog('────────────────────', 'divider');
+                            addLog('✅ すべての処理が完了しました', 'success');
+                            setTimeout(loadStatus, 1000);
+                        } else if (data.message) {
+                            const msg = data.message;
+                            const type = msg.includes('✅') || msg.includes('完了') ? 'success'
+                                       : msg.includes('❌') || msg.includes('失敗') ? 'error'
+                                       : msg.includes('中...') || msg.includes('開始') ? 'info' : '';
+                            addLog(msg, type);
+                        }
+                    }
+                }
+            } catch (e) {
+                addLog('❌ 接続エラーが発生しました', 'error');
+            }
+
+            btn.disabled = false;
+            btn.textContent = '更新実行';
+        }
+
+        loadStatus();
+        setInterval(loadStatus, 60000);
+    </script>
+</body>
+</html>

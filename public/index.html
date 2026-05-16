@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>Choco-ip 位置情報チェッカー</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+        }
+
+        h1 {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .subtitle {
+            color: #94a3b8;
+            font-size: 0.95rem;
+            margin-bottom: 36px;
+            text-align: center;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 32px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 24px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #475569;
+            border-radius: 10px;
+            color: #e2e8f0;
+            font-size: 1rem;
+            padding: 12px 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus { border-color: #60a5fa; }
+        input[type="text"]::placeholder { color: #64748b; }
+
+        button {
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 600;
+            padding: 12px 20px;
+            transition: opacity 0.2s, transform 0.1s;
+            white-space: nowrap;
+        }
+
+        button:hover { opacity: 0.9; }
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 16px;
+            background: #0f172a;
+            border-radius: 10px;
+            padding: 4px;
+        }
+
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            color: #64748b;
+            transition: background 0.2s, color 0.2s;
+            user-select: none;
+        }
+
+        .tab.active {
+            background: #1e293b;
+            color: #e2e8f0;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .result-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .result-item {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 11px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .result-label {
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .result-value {
+            color: #e2e8f0;
+            font-size: 0.92rem;
+            font-weight: 500;
+            text-align: right;
+            word-break: break-all;
+        }
+
+        .section-title {
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin: 16px 0 8px;
+        }
+
+        .section-title:first-child { margin-top: 0; }
+
+        #map {
+            width: 100%;
+            height: 220px;
+            border-radius: 10px;
+            margin-top: 12px;
+            border: 1px solid #334155;
+            overflow: hidden;
+        }
+
+        .error-box {
+            background: #450a0a;
+            border: 1px solid #7f1d1d;
+            border-radius: 10px;
+            color: #fca5a5;
+            padding: 14px 18px;
+            font-size: 0.9rem;
+        }
+
+        .loading-box {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #64748b;
+            padding: 14px 0;
+            font-size: 0.9rem;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #334155;
+            border-top-color: #60a5fa;
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+            flex-shrink: 0;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .badge {
+            display: inline-block;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            margin-left: 6px;
+            vertical-align: middle;
+        }
+
+        .badge-blue  { background: #1e3a5f; color: #60a5fa; }
+        .badge-purple { background: #2e1a5f; color: #a78bfa; }
+
+        .api-note {
+            margin-top: 24px;
+            color: #475569;
+            font-size: 0.78rem;
+            text-align: center;
+        }
+
+        .api-note code {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #94a3b8;
+            padding: 2px 6px;
+            font-family: monospace;
+        }
+
+        #resultArea { display: none; }
+    </style>
+</head>
+<body>
+    <h1>Choco-ip 位置情報チェッカー</h1>
+    <p class="subtitle">Choco-ip — IPアドレスから詳細な位置情報を取得します</p>
+
+    <div class="card">
+        <div class="input-group">
+            <input type="text" id="ipInput" placeholder="例: 8.8.8.8 または 2001:4860::8888" />
+            <button id="checkBtn" onclick="checkIP()">検索</button>
+        </div>
+        <button id="myIpBtn" onclick="checkMyIP()" style="width:100%;margin-bottom:24px;background:#1e293b;border:1px solid #475569;color:#94a3b8;font-size:0.88rem;">
+            📍 現在のIPアドレスを確認
+        </button>
+
+        <div id="geoPanel" style="display:none;margin-bottom:20px;">
+            <div id="geoPanelInner"></div>
+            <div id="geoMap" style="display:none;width:100%;height:200px;border-radius:10px;margin-top:10px;border:1px solid #334155;overflow:hidden;"></div>
+        </div>
+
+        <div id="resultArea">
+            <div class="tabs">
+                <div class="tab active" onclick="switchTab('light')">
+                    geoip-country <span class="badge badge-blue">Light</span>
+                </div>
+                <div class="tab" onclick="switchTab('detail')">
+                    GeoLite2 <span class="badge badge-purple">Detail</span>
+                </div>
+                <div class="tab" onclick="switchTab('map')">地図</div>
+            </div>
+
+            <div id="tab-light" class="tab-panel active"></div>
+            <div id="tab-detail" class="tab-panel"></div>
+            <div id="tab-map" class="tab-panel">
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <p class="api-note">
+            API: <code>/api/check/light/{ip}</code> &nbsp;|&nbsp; <code>/api/check/detail/{ip}</code> &nbsp;|&nbsp; <code>/api/check/asn/{ip}</code>
+        </p>
+
+        <div style="margin-top:20px;border-top:1px solid #1e293b;padding-top:16px;">
+            <a href="/admin" style="display:flex;align-items:center;justify-content:space-between;background:#0f172a;border:1px solid #334155;border-radius:10px;padding:12px 16px;text-decoration:none;transition:border-color 0.2s;" onmouseover="this.style.borderColor='#475569'" onmouseout="this.style.borderColor='#334155'">
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <span style="font-size:1.1rem;">⚙️</span>
+                    <div>
+                        <div style="color:#94a3b8;font-size:0.88rem;font-weight:600;">サーバーパネル</div>
+                        <div style="color:#475569;font-size:0.75rem;margin-top:2px;">サーバーステータス・DB手動更新</div>
+                    </div>
+                </div>
+                <span style="color:#475569;font-size:1rem;">→</span>
+            </a>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        const ipInput = document.getElementById('ipInput');
+        const checkBtn = document.getElementById('checkBtn');
+        const resultArea = document.getElementById('resultArea');
+        let leafletMap = null;
+
+        ipInput.addEventListener('keydown', e => { if (e.key === 'Enter') checkIP(); });
+
+        function countryCodeToFlag(code) {
+            if (!code || code.length !== 2) return '';
+            return String.fromCodePoint(
+                ...code.toUpperCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65)
+            );
+        }
+
+        function ipVersionBadge(ip) {
+            if (!ip) return '';
+            if (ip.includes(':')) return '<span class="badge badge-purple">IPv6</span>';
+            return '<span class="badge badge-blue">IPv4</span>';
+        }
+
+        // 6to4 (RFC 3056): 2002:aabb:ccdd:: → aa.bb.cc.dd
+        function extractIPv4fromIPv6(ip) {
+            if (!ip || !ip.includes(':')) return null;
+            const lower = ip.toLowerCase();
+            if (lower.startsWith('2002:')) {
+                const parts = lower.split(':');
+                if (parts.length >= 3) {
+                    const g2 = parts[1].padStart(4, '0');
+                    const g3 = parts[2].padStart(4, '0');
+                    const o = [
+                        parseInt(g2.slice(0, 2), 16),
+                        parseInt(g2.slice(2, 4), 16),
+                        parseInt(g3.slice(0, 2), 16),
+                        parseInt(g3.slice(2, 4), 16),
+                    ];
+                    if (o.every(n => n >= 0 && n <= 255)) return o.join('.');
+                }
+            }
+            return null;
+        }
+
+        function row(label, value) {
+            if (value === null || value === undefined || value === '') return '';
+            return `<div class="result-item">
+                <span class="result-label">${label}</span>
+                <span class="result-value">${value}</span>
+            </div>`;
+        }
+
+        function switchTab(name) {
+            document.querySelectorAll('.tab').forEach((t, i) => {
+                const names = ['light', 'detail', 'map'];
+                t.classList.toggle('active', names[i] === name);
+            });
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`tab-${name}`).classList.add('active');
+
+            if (name === 'map') {
+                setTimeout(() => { if (leafletMap) leafletMap.invalidateSize(); }, 50);
+            }
+        }
+
+        function showLoading(panelId) {
+            document.getElementById(panelId).innerHTML =
+                `<div class="loading-box"><span class="spinner"></span>取得中...</div>`;
+        }
+
+        function showError(panelId, msg) {
+            document.getElementById(panelId).innerHTML =
+                `<div class="error-box">⚠️ ${msg}</div>`;
+        }
+
+        function renderLight(data) {
+            const flag = countryCodeToFlag(data.country);
+            document.getElementById('tab-light').innerHTML = `<div class="result-grid">
+                ${row('IPアドレス', data.ip + ' ' + ipVersionBadge(data.ip))}
+                ${row('国コード', data.country || '不明')}
+                ${row('国名', `${flag ? flag + ' ' : ''}${data.country_name || '不明'}`)}
+            </div>`;
+        }
+
+        function renderDetail(data) {
+            const flag = countryCodeToFlag(data.country_code);
+            const eu = data.is_in_european_union === true ? '✅ EU加盟国'
+                     : data.is_in_european_union === false ? '❌ 非EU' : null;
+            const coords = (data.latitude != null && data.longitude != null)
+                ? `${data.latitude}, ${data.longitude}` : null;
+
+            document.getElementById('tab-detail').innerHTML = `
+                <div class="section-title">基本情報</div>
+                <div class="result-grid">
+                    ${row('IPアドレス', data.ip + ' ' + ipVersionBadge(data.ip))}
+                    ${row('国コード', data.country_code)}
+                    ${row('国名（日本語）', `${flag ? flag + ' ' : ''}${data.country_name_ja || ''}`)}
+                    ${row('国名（英語）', data.country_name_en)}
+                    ${row('EU加盟', eu)}
+                </div>
+
+                <div class="section-title">地域情報</div>
+                <div class="result-grid">
+                    ${row('大陸', `${data.continent_name_ja || ''}${data.continent_code ? ' (' + data.continent_code + ')' : ''}`)}
+                    ${row('都市（日本語）', data.city_name_ja)}
+                    ${row('都市（英語）', data.city_name_en)}
+                    ${row('州・県', data.subdivision_name_ja || data.subdivision_name_en)}
+                    ${row('郵便番号', data.postal_code)}
+                </div>
+
+                <div class="section-title">位置・その他</div>
+                <div class="result-grid">
+                    ${row('座標', coords)}
+                    ${row('精度半径', data.accuracy_radius_km != null ? `±${data.accuracy_radius_km} km` : null)}
+                    ${row('タイムゾーン', data.time_zone)}
+                </div>
+
+                ${(data.asn || data.organization) ? `
+                <div class="section-title">ネットワーク（ASN）</div>
+                <div class="result-grid">
+                    ${row('AS番号', data.asn)}
+                    ${row('組織 / ISP', data.organization)}
+                </div>` : ''}
+            `;
+        }
+
+        function showMap(lat, lon, label) {
+            if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+            leafletMap = L.map('map').setView([lat, lon], 10);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(leafletMap);
+            L.marker([lat, lon]).bindPopup(label || '').addTo(leafletMap);
+        }
+
+        let geoLeafletMap = null;
+
+        async function reverseGeocode(lat, lon) {
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+                    { headers: { 'Accept-Language': 'ja' } }
+                );
+                const data = await res.json();
+                return data.display_name || null;
+            } catch { return null; }
+        }
+
+        function showGeoMap(lat, lon, label) {
+            const geoMapDiv = document.getElementById('geoMap');
+            geoMapDiv.style.display = 'block';
+            if (geoLeafletMap) { geoLeafletMap.remove(); geoLeafletMap = null; }
+            geoLeafletMap = L.map('geoMap').setView([lat, lon], 12);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(geoLeafletMap);
+            L.marker([lat, lon]).bindPopup(label || '').openPopup().addTo(geoLeafletMap);
+        }
+
+        async function checkMyIP() {
+            const btn = document.getElementById('myIpBtn');
+            const geoPanel = document.getElementById('geoPanel');
+            const geoPanelInner = document.getElementById('geoPanelInner');
+            const geoMapDiv = document.getElementById('geoMap');
+
+            btn.disabled = true;
+            btn.textContent = '取得中...';
+            geoPanel.style.display = 'block';
+            geoMapDiv.style.display = 'none';
+            geoPanelInner.innerHTML = `<div class="loading-box"><span class="spinner"></span>位置情報・IPアドレスを取得中...</div>`;
+
+            // IPとGeolocationを並行取得
+            const [ipRes, geoResult] = await Promise.allSettled([
+                fetch('/api/check/light/me').then(r => r.json()),
+                new Promise((resolve, reject) => {
+                    if (!('geolocation' in navigator)) { reject(new Error('非対応')); return; }
+                    navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 10000, maximumAge: 60000 });
+                })
+            ]);
+
+            const ipData = ipRes.status === 'fulfilled' && !ipRes.value.error ? ipRes.value : null;
+            const pos = geoResult.status === 'fulfilled' ? geoResult.value : null;
+
+            if (ipData) {
+                ipInput.value = ipData.ip;
+                checkIP(); // タブ結果も並行表示
+            }
+
+            if (pos) {
+                // Geolocation 成功 → 地名も取得
+                const { latitude, longitude, accuracy } = pos.coords;
+                geoPanelInner.innerHTML = `<div class="loading-box"><span class="spinner"></span>地名を取得中...</div>`;
+                const placeName = await reverseGeocode(latitude, longitude);
+                const flag = ipData ? countryCodeToFlag(ipData.country) : '';
+
+                const ipv4conv = ipData ? extractIPv4fromIPv6(ipData.ip) : null;
+                geoPanelInner.innerHTML = `
+                    <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#86efac;margin-bottom:8px;">
+                        ✅ Geolocation API + IP情報
+                    </div>
+                    <div class="result-grid">
+                        ${ipData ? row('IPアドレス', ipData.ip + ' ' + ipVersionBadge(ipData.ip)) : ''}
+                        ${ipv4conv ? row('IPv4換算', ipv4conv + ' <span style="font-size:0.72rem;color:#64748b;">6to4</span>') : ''}
+                        ${ipData ? row('国名', `${flag ? flag + ' ' : ''}${ipData.country_name || ipData.country}`) : ''}
+                        ${row('緯度', latitude.toFixed(5))}
+                        ${row('経度', longitude.toFixed(5))}
+                        ${row('精度', `±${Math.round(accuracy)} m`)}
+                        ${placeName ? row('地名', placeName) : ''}
+                    </div>
+                `;
+                showGeoMap(latitude, longitude, placeName || ipData?.ip || '現在地');
+            } else {
+                // Geolocation 失敗 → IPベースのみ
+                if (ipData) {
+                    const flag = countryCodeToFlag(ipData.country);
+                    const ipv4conv2 = extractIPv4fromIPv6(ipData.ip);
+                    geoPanelInner.innerHTML = `
+                        <div style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#fcd34d;margin-bottom:8px;">
+                            ⚠️ Geolocation 拒否 — IPアドレスから取得
+                        </div>
+                        <div class="result-grid">
+                            ${row('IPアドレス', ipData.ip + ' ' + ipVersionBadge(ipData.ip))}
+                            ${ipv4conv2 ? row('IPv4換算', ipv4conv2 + ' <span style="font-size:0.72rem;color:#64748b;">6to4</span>') : ''}
+                            ${row('国名', `${flag ? flag + ' ' : ''}${ipData.country_name || ipData.country}`)}
+                        </div>
+                    `;
+                } else {
+                    geoPanelInner.innerHTML = `<div class="error-box">⚠️ 現在地・IPアドレスの取得に失敗しました</div>`;
+                }
+            }
+
+            btn.disabled = false;
+            btn.textContent = '📍 現在のIPアドレスを確認';
+        }
+
+        async function checkIP() {
+            const ip = ipInput.value.trim();
+            if (!ip) return;
+
+            checkBtn.disabled = true;
+            resultArea.style.display = 'block';
+            switchTab('light');
+            showLoading('tab-light');
+            showLoading('tab-detail');
+            document.getElementById('tab-map').innerHTML = '<div id="map"></div>';
+            if (leafletMap) { leafletMap.remove(); leafletMap = null; }
+
+            const [lightRes, detailRes] = await Promise.allSettled([
+                fetch(`/api/check/light/${encodeURIComponent(ip)}`).then(r => r.json().then(d => ({ ok: r.ok, d }))),
+                fetch(`/api/check/detail/${encodeURIComponent(ip)}`).then(r => r.json().then(d => ({ ok: r.ok, d })))
+            ]);
+
+            if (lightRes.status === 'fulfilled' && lightRes.value.ok) {
+                renderLight(lightRes.value.d);
+            } else {
+                const msg = lightRes.value?.d?.error || 'geoip-country での取得に失敗しました';
+                showError('tab-light', msg);
+            }
+
+            if (detailRes.status === 'fulfilled' && detailRes.value.ok) {
+                const detail = detailRes.value.d;
+                renderDetail(detail);
+                if (detail.latitude != null && detail.longitude != null) {
+                    const label = [detail.city_name_ja, detail.country_name_ja].filter(Boolean).join(', ');
+                    showMap(detail.latitude, detail.longitude, label);
+                } else {
+                    document.getElementById('tab-map').innerHTML =
+                        `<div class="error-box" style="margin-top:8px">⚠️ このIPの座標情報がありません</div>`;
+                }
+            } else {
+                const msg = detailRes.value?.d?.error || 'GeoLite2 での取得に失敗しました';
+                showError('tab-detail', msg);
+                document.getElementById('tab-map').innerHTML =
+                    `<div class="error-box" style="margin-top:8px">⚠️ ${msg}</div>`;
+            }
+
+            checkBtn.disabled = false;
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleString('ja-JP', {
+                timeZone: 'Asia/Tokyo',
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+    </script>
+</body>
+</html>

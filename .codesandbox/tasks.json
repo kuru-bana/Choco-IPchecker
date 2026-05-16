@@ -1,0 +1,18 @@
+{
+  "version": "0.1",
+  "tasks": {
+    "setup": {
+      "name": "DBセットアップ (要ライセンスキー)",
+      "command": "npm run build",
+      "runAtStart": false
+    },
+    "start": {
+      "name": "アプリを起動",
+      "command": "npm start",
+      "runAtStart": true,
+      "preview": {
+        "port": 5000
+      }
+    }
+  }
+}

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>GeoLite2-ASN 詳細 — Choco-ip 位置情報チェッカー</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 24px 60px;
+        }
+
+        .top-bar {
+            width: 100%;
+            max-width: 760px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .back-link {
+            color: #64748b;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #94a3b8; }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 28px;
+            width: 100%;
+            max-width: 760px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+
+        .card-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #64748b;
+            margin-bottom: 16px;
+        }
+
+        /* フィールドテーブル */
+        .field-table { width: 100%; border-collapse: collapse; }
+        .field-table th {
+            color: #475569;
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            text-align: left;
+            padding: 0 10px 8px;
+        }
+        .field-table td {
+            padding: 9px 10px;
+            font-size: 0.84rem;
+            border-top: 1px solid #1e293b;
+            vertical-align: top;
+        }
+        .field-table tr:first-child td { border-top: none; }
+        .field-name {
+            font-family: 'Courier New', monospace;
+            color: #60a5fa;
+            font-size: 0.8rem;
+            white-space: nowrap;
+        }
+        .field-type  { color: #a78bfa; font-size: 0.75rem; white-space: nowrap; }
+        .field-desc  { color: #94a3b8; }
+        .field-example { color: #64748b; font-size: 0.78rem; font-family: 'Courier New', monospace; }
+
+        /* ASNカードグリッド */
+        .note-box {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px 18px;
+            color: #64748b;
+            font-size: 0.82rem;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        .samples-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+        @media (max-width: 600px) { .samples-grid { grid-template-columns: 1fr; } }
+
+        .sample-card {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 10px;
+            padding: 14px 16px;
+        }
+
+        .sample-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .sample-label { font-weight: 700; font-size: 0.88rem; color: #e2e8f0; }
+        .sample-ip    { font-family: 'Courier New', monospace; font-size: 0.74rem; color: #64748b; margin-top: 2px; }
+
+        .cat-tag {
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 4px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .cat-cloud    { background: #1c2f1c; color: #86efac; }
+        .cat-cdn      { background: #1e2a4a; color: #60a5fa; }
+        .cat-tech     { background: #2e1a5f; color: #a78bfa; }
+        .cat-carrier  { background: #2e2010; color: #fbbf24; }
+        .cat-registry { background: #1a2e2e; color: #67e8f9; }
+        .cat-backbone { background: #3b1515; color: #fca5a5; }
+        .cat-research { background: #1e293b; color: #94a3b8; }
+        .cat-security { background: #2e1a1a; color: #f87171; }
+        .cat-sns      { background: #2e1a4a; color: #c4b5fd; }
+        .cat-enterprise { background: #1a2a1a; color: #a7f3d0; }
+
+        .asn-badge {
+            display: inline-block;
+            background: #1e3a5f;
+            border: 1px solid #1e4a7f;
+            border-radius: 5px;
+            color: #60a5fa;
+            font-family: 'Courier New', monospace;
+            font-size: 0.82rem;
+            font-weight: 700;
+            padding: 3px 9px;
+            margin-bottom: 8px;
+        }
+
+        .sample-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 8px;
+            font-size: 0.78rem;
+            margin-bottom: 3px;
+        }
+        .s-label { color: #475569; white-space: nowrap; flex-shrink: 0; }
+        .s-value { color: #94a3b8; text-align: right; word-break: break-all; }
+        .s-org   { color: #e2e8f0; font-weight: 600; font-size: 0.82rem; margin-bottom: 6px; word-break: break-all; }
+
+        .not-found { color: #475569; font-size: 0.82rem; text-align: center; padding: 10px 0; }
+
+        .loading { color: #475569; font-size: 0.85rem; text-align: center; padding: 20px 0; }
+        .spinner {
+            display: inline-block; width: 14px; height: 14px;
+            border: 2px solid #334155; border-top-color: #60a5fa;
+            border-radius: 50%; animation: spin 0.7s linear infinite;
+            vertical-align: middle; margin-right: 6px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <a href="/db-info" class="back-link">← DB情報へ</a>
+        <h1>GeoLite2-ASN 詳細</h1>
+        <div style="width:80px;"></div>
+    </div>
+
+    <!-- ASNとは -->
+    <div class="card">
+        <div class="card-title">ASN（自律システム番号）とは</div>
+        <div class="note-box">
+            ASN（Autonomous System Number）はインターネット上のネットワーク群を一意に識別する番号です。
+            各 ISP・企業・大学・データセンターなどが独自のASを持ち、BGPプロトコルで相互接続しています。
+            GeoLite2-ASN データベースはIPアドレスからそのIPが属するASNと組織名を特定します。
+        </div>
+        <table class="field-table">
+            <thead>
+                <tr>
+                    <th>フィールド名</th>
+                    <th>型</th>
+                    <th>説明</th>
+                    <th>例</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="field-name">asn</td>
+                    <td class="field-type">string</td>
+                    <td class="field-desc">AS番号（"AS" プレフィックス付き）</td>
+                    <td class="field-example">AS15169</td>
+                </tr>
+                <tr>
+                    <td class="field-name">asn_number</td>
+                    <td class="field-type">number</td>
+                    <td class="field-desc">AS番号（数値のみ）</td>
+                    <td class="field-example">15169</td>
+                </tr>
+                <tr>
+                    <td class="field-name">organization</td>
+                    <td class="field-type">string</td>
+                    <td class="field-desc">そのASを管理する組織名・ISP名</td>
+                    <td class="field-example">GOOGLE</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- サンプルデータ -->
+    <div class="card">
+        <div class="card-title">世界の主要ネットワークのサンプルデータ</div>
+        <div id="samplesContainer">
+            <div class="loading"><span class="spinner"></span>取得中...</div>
+        </div>
+    </div>
+
+    <script>
+        const catClass = {
+            '検索・クラウド':      'cat-cloud',
+            'CDN・セキュリティ':  'cat-cdn',
+            'エンタープライズ':   'cat-enterprise',
+            'セキュリティ':       'cat-security',
+            '大手テック':         'cat-tech',
+            'SNS・大手テック':    'cat-sns',
+            'バックボーン':       'cat-backbone',
+            'レジストリ':         'cat-registry',
+            '通信キャリア':       'cat-carrier',
+            '研究ネットワーク':   'cat-research',
+        };
+
+        function flag(code) {
+            if (!code || code.length !== 2) return '';
+            return String.fromCodePoint(...code.toUpperCase().split('').map(c => 0x1F1E6 + c.charCodeAt(0) - 65));
+        }
+
+        function renderSamples(samples) {
+            const grid = document.createElement('div');
+            grid.className = 'samples-grid';
+
+            for (const s of samples) {
+                const card = document.createElement('div');
+                card.className = 'sample-card';
+                const tagClass = catClass[s.category] || 'cat-registry';
+
+                if (!s.found) {
+                    card.innerHTML = `
+                        <div class="sample-header">
+                            <div>
+                                <div class="sample-label">${s.label}</div>
+                                <div class="sample-ip">${s.ip}</div>
+                            </div>
+                            <span class="cat-tag ${tagClass}">${s.category}</span>
+                        </div>
+                        <div class="not-found">データなし</div>`;
+                    grid.appendChild(card);
+                    continue;
+                }
+
+                const countryStr = s.country_code
+                    ? `${flag(s.country_code)} ${s.country_ja || s.country_code}`
+                    : '—';
+
+                card.innerHTML = `
+                    <div class="sample-header">
+                        <div>
+                            <div class="sample-label">${s.label}</div>
+                            <div class="sample-ip">${s.ip}</div>
+                        </div>
+                        <span class="cat-tag ${tagClass}">${s.category}</span>
+                    </div>
+                    ${s.asn ? `<div class="asn-badge">${s.asn}</div>` : ''}
+                    <div class="s-org">${s.organization || '—'}</div>
+                    <div class="sample-row">
+                        <span class="s-label">AS番号（数値）</span>
+                        <span class="s-value">${s.asn_number?.toLocaleString('ja-JP') || '—'}</span>
+                    </div>
+                    <div class="sample-row">
+                        <span class="s-label">国</span>
+                        <span class="s-value">${countryStr}</span>
+                    </div>`;
+                grid.appendChild(card);
+            }
+
+            document.getElementById('samplesContainer').innerHTML = '';
+            document.getElementById('samplesContainer').appendChild(grid);
+        }
+
+        async function load() {
+            try {
+                const res = await fetch('/api/db-info/asn-samples');
+                const data = await res.json();
+                renderSamples(data.samples);
+            } catch {
+                document.getElementById('samplesContainer').innerHTML =
+                    '<div class="loading" style="color:#fca5a5;">⚠️ データの取得に失敗しました</div>';
+            }
+        }
+
+        load();
+    </script>
+</body>
+</html>

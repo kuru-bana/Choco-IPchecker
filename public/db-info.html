@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <title>DB情報 — Choco-ip 位置情報チェッカー</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0f172a;
+            color: #e2e8f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 40px 24px;
+        }
+
+        .top-bar {
+            width: 100%;
+            max-width: 640px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 28px;
+        }
+
+        .back-link {
+            color: #64748b;
+            font-size: 0.85rem;
+            text-decoration: none;
+            transition: color 0.2s;
+        }
+        .back-link:hover { color: #94a3b8; }
+
+        h1 {
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 16px;
+            padding: 28px;
+            width: 100%;
+            max-width: 640px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.4);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+        }
+
+        .card-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+
+        .card-sub {
+            font-size: 0.75rem;
+            color: #64748b;
+            margin-top: 2px;
+        }
+
+        .badge {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        .badge-blue   { background: #1e3a5f; color: #60a5fa; }
+        .badge-purple { background: #2e1a5f; color: #a78bfa; }
+        .badge-green  { background: #052e16; color: #86efac; }
+        .badge-red    { background: #450a0a; color: #fca5a5; }
+
+        .info-grid {
+            display: grid;
+            gap: 8px;
+        }
+
+        .info-row {
+            background: #0f172a;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            padding: 11px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .info-label {
+            color: #64748b;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        .info-value {
+            color: #e2e8f0;
+            font-size: 0.88rem;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        .info-value.mono {
+            font-family: 'Courier New', monospace;
+            font-size: 0.82rem;
+            color: #a78bfa;
+        }
+
+        .lang-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            justify-content: flex-end;
+        }
+
+        .lang-tag {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            color: #94a3b8;
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 2px 7px;
+        }
+
+        .section-divider {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #475569;
+            margin: 14px 0 8px;
+        }
+
+        .unavailable {
+            color: #475569;
+            font-size: 0.88rem;
+            padding: 20px 0;
+            text-align: center;
+        }
+
+        .size-bar-wrap {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 4px;
+        }
+
+        .size-bar-bg {
+            width: 120px;
+            height: 6px;
+            background: #1e293b;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .size-bar-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.6s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-bar">
+        <a href="/admin" class="back-link">← 管理者パネルへ</a>
+        <h1>DB 情報</h1>
+        <div style="width:120px;"></div>
+    </div>
+
+    <div id="cityCard" class="card">
+        <div class="card-header">
+            <div style="flex:1;">
+                <div class="card-title">GeoLite2-City <span class="badge badge-purple">Detail</span></div>
+                <div class="card-sub">都市・地域・座標・タイムゾーン情報</div>
+            </div>
+            <a href="/city-info" style="background:#2e1a5f;border:1px solid #4c2a9f;border-radius:8px;color:#a78bfa;font-size:0.78rem;font-weight:600;padding:6px 12px;text-decoration:none;white-space:nowrap;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">詳細を見る →</a>
+        </div>
+        <div id="cityContent" class="info-grid">
+            <div class="unavailable">読み込み中...</div>
+        </div>
+    </div>
+
+    <div id="asnCard" class="card">
+        <div class="card-header">
+            <div style="flex:1;">
+                <div class="card-title">GeoLite2-ASN <span class="badge badge-blue">Network</span></div>
+                <div class="card-sub">自律システム番号・ISP情報</div>
+            </div>
+            <a href="/asn-info" style="background:#1e3a5f;border:1px solid #2a5a9f;border-radius:8px;color:#60a5fa;font-size:0.78rem;font-weight:600;padding:6px 12px;text-decoration:none;white-space:nowrap;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.8'" onmouseout="this.style.opacity='1'">詳細を見る →</a>
+        </div>
+        <div id="asnContent" class="info-grid">
+            <div class="unavailable">読み込み中...</div>
+        </div>
+    </div>
+
+    <script>
+        function formatBytes(bytes) {
+            if (bytes == null) return '—';
+            if (bytes >= 1024 * 1024 * 1024) return (bytes / 1024 / 1024 / 1024).toFixed(1) + ' GB';
+            if (bytes >= 1024 * 1024) return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+            if (bytes >= 1024) return (bytes / 1024).toFixed(1) + ' KB';
+            return bytes + ' B';
+        }
+
+        function formatNum(n) {
+            if (n == null) return '—';
+            return n.toLocaleString('ja-JP');
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '—';
+            return new Date(iso).toLocaleString('ja-JP', {
+                timeZone: 'Asia/Tokyo',
+                year: 'numeric', month: 'long', day: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        }
+
+        function row(label, value) {
+            return `<div class="info-row">
+                <span class="info-label">${label}</span>
+                <span class="info-value">${value}</span>
+            </div>`;
+        }
+
+        function monoRow(label, value) {
+            return `<div class="info-row">
+                <span class="info-label">${label}</span>
+                <span class="info-value mono">${value}</span>
+            </div>`;
+        }
+
+        function langRow(label, langs) {
+            const tags = langs.map(l => `<span class="lang-tag">${l}</span>`).join('');
+            return `<div class="info-row">
+                <span class="info-label">${label}</span>
+                <div class="lang-list">${tags}</div>
+            </div>`;
+        }
+
+        function sizeRow(label, bytes, maxBytes) {
+            const pct = maxBytes ? Math.round((bytes / maxBytes) * 100) : 100;
+            const color = pct > 60 ? '#60a5fa' : '#a78bfa';
+            return `<div class="info-row">
+                <span class="info-label">${label}</span>
+                <div class="size-bar-wrap">
+                    <span class="info-value">${formatBytes(bytes)}</span>
+                    <div class="size-bar-bg">
+                        <div class="size-bar-fill" style="width:${pct}%;background:${color};"></div>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderDb(containerId, data, maxFileSize) {
+            if (!data) {
+                document.getElementById(containerId).innerHTML =
+                    '<div class="unavailable">❌ データベースが読み込まれていません</div>';
+                return;
+            }
+
+            const ipVer = data.ipVersion === 6 ? 'IPv4 / IPv6 両対応' : 'IPv4 のみ';
+
+            document.getElementById(containerId).innerHTML = `
+                <div class="section-divider">ファイル情報</div>
+                ${sizeRow('ファイルサイズ', data.fileSizeBytes, maxFileSize)}
+                ${row('バイナリ形式', `MaxMind DB v${data.binaryFormat}`)}
+
+                <div class="section-divider">データベース内容</div>
+                ${monoRow('DBタイプ', data.databaseType)}
+                ${row('ビルド日時', formatDate(data.buildEpoch))}
+                ${row('IP対応バージョン', ipVer)}
+                ${row('ノード数', formatNum(data.nodeCount))}
+                ${row('レコードサイズ', data.recordSize + ' bit')}
+                ${row('ツリー深度', data.treeDepth)}
+                ${data.languages?.length ? langRow('対応言語', data.languages) : ''}
+            `;
+        }
+
+        async function load() {
+            try {
+                const res = await fetch('/api/db-info');
+                const d = await res.json();
+                const maxSize = Math.max(d.city?.fileSizeBytes || 0, d.asn?.fileSizeBytes || 0);
+                renderDb('cityContent', d.city, maxSize);
+                renderDb('asnContent', d.asn, maxSize);
+            } catch {
+                document.getElementById('cityContent').innerHTML =
+                    '<div class="unavailable">⚠️ データの取得に失敗しました</div>';
+                document.getElementById('asnContent').innerHTML =
+                    '<div class="unavailable">⚠️ データの取得に失敗しました</div>';
+            }
+        }
+
+        load();
+    </script>
+</body>
+</html>

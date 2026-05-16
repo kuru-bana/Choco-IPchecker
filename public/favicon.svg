@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="38%" r="68%">
+      <stop offset="0%" stop-color="#3a1606"/>
+      <stop offset="100%" stop-color="#180602"/>
+    </radialGradient>
+    <linearGradient id="choco" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#9a4a14"/>
+      <stop offset="100%" stop-color="#5e1e06"/>
+    </linearGradient>
+    <linearGradient id="chocoShine" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#c06030" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#c06030" stop-opacity="0"/>
+    </linearGradient>
+    <radialGradient id="pin" cx="38%" cy="32%" r="65%">
+      <stop offset="0%" stop-color="#f0c070"/>
+      <stop offset="100%" stop-color="#b06020"/>
+    </radialGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="100" height="100" rx="20" fill="url(#bg)"/>
+  <rect width="100" height="100" rx="20" fill="none" stroke="#6a3010" stroke-width="1.5"/>
+
+  <!-- テキスト 1行目: CHOCO -->
+  <text x="50" y="17" font-family="'Arial Black', Arial, sans-serif" font-size="15"
+        font-weight="900" fill="#f0d8a8" text-anchor="middle" letter-spacing="2">CHOCO</text>
+
+  <!-- テキスト 2行目: IP-CHECKER -->
+  <text x="50" y="30" font-family="'Arial Black', Arial, sans-serif" font-size="8.5"
+        font-weight="900" fill="#c8a870" text-anchor="middle" letter-spacing="1.2">IP-CHECKER</text>
+
+  <!-- チョコバー本体 -->
+  <rect x="18" y="37" width="64" height="42" rx="5" fill="url(#choco)"/>
+  <!-- ハイライト -->
+  <rect x="18" y="37" width="64" height="14" rx="5" fill="url(#chocoShine)"/>
+  <!-- 溝（横） -->
+  <line x1="18" y1="51" x2="82" y2="51" stroke="#3e1004" stroke-width="1.4"/>
+  <line x1="18" y1="65" x2="82" y2="65" stroke="#3e1004" stroke-width="1.4"/>
+  <!-- 溝（縦） -->
+  <line x1="39.3" y1="37" x2="39.3" y2="79" stroke="#3e1004" stroke-width="1.4"/>
+  <line x1="60.7" y1="37" x2="60.7" y2="79" stroke="#3e1004" stroke-width="1.4"/>
+
+  <!-- 位置ピン（影） -->
+  <ellipse cx="50" cy="78" rx="7" ry="1.8" fill="#000" opacity="0.3"/>
+  <!-- ピン本体 -->
+  <circle cx="50" cy="56" r="9" fill="url(#pin)"/>
+  <path d="M50 65 L44.5 76 Q50 73.5 55.5 76 Z" fill="url(#pin)"/>
+  <circle cx="50" cy="56" r="3.4" fill="#1a0602"/>
+  <circle cx="47.3" cy="53.3" r="1.8" fill="#fff" opacity="0.35"/>
+</svg>
