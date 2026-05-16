@@ -603,7 +603,7 @@ function _buildAllResponse() {
 }
 
 app.get('/api/city-explore/status', (req, res) => {
-    res.json({ ready: _compReady, building: _compBuilding, progress: _compProgress, stats: _compStats });
+    res.json({ ready: _compReady, building: _compBuilding, progress: _compProgress, stats: _compStats, dbLoaded: cityLookup !== null });
 });
 
 app.get('/api/city-explore/countries', (req, res) => {
