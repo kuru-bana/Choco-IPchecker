@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>国別IP ブラウザ</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+        .site-header {
+            position: sticky; top: 0; z-index: 200;
+            background: rgba(15,23,42,0.97); backdrop-filter: blur(8px);
+            border-bottom: 1px solid #1e293b;
+            padding: 12px 24px;
+            display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+        }
+        .back-link { color: #64748b; font-size: 0.85rem; text-decoration: none; white-space: nowrap; }
+        .back-link:hover { color: #94a3b8; }
+        .header-flag { font-size: 1.6rem; line-height: 1; }
+        h1 {
+            font-size: 1.2rem; font-weight: 700;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+        }
+        .h-en { font-size: 0.78rem; color: #475569; font-weight: 400; }
+        .header-spacer { flex: 1; }
+        #searchBox {
+            background: #1e293b; border: 1px solid #334155; border-radius: 8px;
+            color: #e2e8f0; font-size: 0.85rem; padding: 8px 14px; width: 220px; outline: none;
+            transition: border-color 0.2s;
+        }
+        #searchBox::placeholder { color: #475569; }
+        #searchBox:focus { border-color: #60a5fa; }
+        .stat-badge {
+            background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+            color: #64748b; font-size: 0.75rem; padding: 5px 12px; white-space: nowrap;
+        }
+
+        .main { padding: 24px; max-width: 1280px; margin: 0 auto; }
+
+        /* Loading */
+        .loading-block {
+            background: #1e293b; border: 1px solid #334155; border-radius: 14px;
+            padding: 48px; text-align: center; margin: 48px 0;
+        }
+        .spinner {
+            display: inline-block; width: 22px; height: 22px;
+            border: 3px solid #334155; border-top-color: #60a5fa;
+            border-radius: 50%; animation: spin 0.7s linear infinite; vertical-align: middle; margin-right: 10px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .progress-bar-wrap { background: #0f172a; border-radius: 6px; height: 6px; margin: 16px auto; max-width: 320px; overflow: hidden; }
+        .progress-bar { background: linear-gradient(90deg, #60a5fa, #a78bfa); height: 100%; border-radius: 6px; transition: width 0.5s; }
+        .loading-note { font-size: 0.8rem; color: #475569; margin-top: 10px; }
+        .error-block {
+            background: #450a0a; border: 1px solid #7f1d1d; border-radius: 12px;
+            padding: 24px; text-align: center; color: #fca5a5; margin: 48px 0;
+        }
+
+        /* Japan region divider */
+        .region-divider {
+            font-size: 0.75rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.12em; color: #60a5fa;
+            border-bottom: 1px solid #1e3a5f;
+            padding-bottom: 6px;
+            margin: 32px 0 12px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .region-divider:first-child { margin-top: 0; }
+        .region-divider-count {
+            font-size: 0.65rem; color: #334155; letter-spacing: 0; font-weight: 400; text-transform: none;
+        }
+
+        /* Prefecture accordion */
+        .pref-block { margin-bottom: 6px; }
+        .pref-block.hidden { display: none; }
+
+        .pref-row {
+            display: flex; align-items: center; gap: 10px;
+            background: #1e293b; border: 1px solid #334155; border-radius: 10px;
+            padding: 12px 16px; cursor: pointer; user-select: none;
+            transition: border-color 0.15s;
+        }
+        .pref-row:hover { border-color: #475569; }
+        .pref-row.open { border-radius: 10px 10px 0 0; border-color: #475569; border-bottom-color: transparent; }
+
+        .p-arrow { font-size: 0.65rem; color: #475569; transition: transform 0.2s; flex-shrink: 0; }
+        .p-arrow.open { transform: rotate(90deg); }
+        .p-name-ja { font-size: 1rem; font-weight: 700; color: #e2e8f0; }
+        .p-name-en { font-size: 0.75rem; color: #64748b; }
+        .p-spacer { flex: 1; }
+        .p-badge {
+            background: #0f172a; border: 1px solid #334155; border-radius: 4px;
+            color: #64748b; font-size: 0.7rem; padding: 3px 10px; white-space: nowrap;
+        }
+
+        .pref-body { display: none; overflow: hidden; }
+        .pref-body.open {
+            display: block;
+            border: 1px solid #475569; border-top: none;
+            border-radius: 0 0 10px 10px;
+        }
+
+        /* IP Table */
+        .table-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; background: #161f30; }
+        thead th {
+            background: #0d1625; color: #64748b;
+            font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em;
+            padding: 10px 14px; text-align: left; white-space: nowrap;
+            border-bottom: 1px solid #1e293b;
+            position: sticky; top: 0;
+        }
+        tbody tr { border-top: 1px solid #1a2540; transition: background 0.1s; }
+        tbody tr:first-child { border-top: none; }
+        tbody tr:hover { background: #1e2d45; }
+        tbody tr.hidden-row { display: none; }
+        tbody tr.hl { background: rgba(96,165,250,0.08); }
+        tbody td { padding: 10px 14px; font-size: 0.85rem; vertical-align: middle; }
+
+        .td-ip { font-family: 'Courier New', monospace; color: #60a5fa; white-space: nowrap; font-weight: 700; font-size: 0.82rem; }
+        .td-city-ja { color: #e2e8f0; font-weight: 600; }
+        .td-city-en { color: #64748b; font-size: 0.78rem; }
+        .td-pref { color: #94a3b8; }
+        .td-post { color: #64748b; font-family: 'Courier New', monospace; font-size: 0.8rem; }
+        .td-tz { color: #a78bfa; font-size: 0.8rem; white-space: nowrap; }
+        .td-coord { font-family: 'Courier New', monospace; color: #64748b; font-size: 0.78rem; white-space: nowrap; }
+        .td-acc { color: #fbbf24; font-size: 0.78rem; }
+        .td-org { color: #94a3b8; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 0.8rem; }
+        .td-asn { font-family: 'Courier New', monospace; color: #34d399; font-size: 0.78rem; white-space: nowrap; }
+        tbody tr.hidden-ver { display: none; }
+        .badge-v6-small {
+            font-size: 0.6rem; background: #2e1a5f; color: #a78bfa;
+            border-radius: 3px; padding: 1px 5px; margin-left: 5px;
+            vertical-align: middle; font-family: sans-serif; font-weight: 700;
+        }
+        .ip-ver-btns { display: flex; gap: 4px; }
+        .ip-ver-btn {
+            background: #1e293b; border: 1px solid #334155; border-radius: 6px;
+            color: #64748b; font-size: 0.72rem; padding: 5px 10px; white-space: nowrap;
+            cursor: pointer; transition: all 0.15s; line-height: 1;
+        }
+        .ip-ver-btn:hover { border-color: #475569; color: #94a3b8; }
+        .ip-ver-btn.act-all { border-color: #475569; color: #94a3b8; background: #263045; }
+        .ip-ver-btn.act-v4  { border-color: #3b82f6; color: #60a5fa; background: #1e3a5f; }
+        .ip-ver-btn.act-v6  { border-color: #8b5cf6; color: #a78bfa; background: #2e1a5f; }
+    </style>
+</head>
+<body>
+
+<header class="site-header">
+    <a href="/city-explore" class="back-link">← 国一覧へ</a>
+    <span class="header-flag" id="countryFlag"></span>
+    <div>
+    <h1 id="headerTitle">🌐読み込み中...</h1>
+        <span class="h-en" id="countryTitleEn"></span>
+    </div>
+    <div class="header-spacer"></div>
+    <input type="search" id="searchBox" placeholder="都市・組織を検索..." disabled>
+    <div class="ip-ver-btns">
+        <button class="ip-ver-btn act-all" id="fAll" onclick="setVerFilter('all')">全て</button>
+        <button class="ip-ver-btn" id="fV4" onclick="setVerFilter('v4')">IPv4</button>
+        <button class="ip-ver-btn" id="fV6" onclick="setVerFilter('v6')">IPv6</button>
+    </div>
+    <span class="stat-badge" id="statBadge">—</span>
+</header>
+
+<main class="main" id="main">
+    <div class="loading-block" id="loadingBlock">
+        <div><span class="spinner"></span><span id="loadingMsg" style="font-size:1rem;color:#94a3b8;">データを準備中...</span></div>
+        <div class="progress-bar-wrap"><div class="progress-bar" id="progressBar" style="width:0%"></div></div>
+        <div class="loading-note">初回のみ時間がかかります。</div>
+    </div>
+</main>
+
+<script>
+    const code = window.location.pathname.split('/').filter(Boolean).pop().toUpperCase();
+
+    // Japan: prefecture → 地方 mapping
+    const JP_REGION_ORDER = [
+        '北海道地方', '東北地方', '関東地方', '中部地方',
+        '近畿地方', '中国地方', '四国地方', '九州・沖縄地方', 'その他'
+    ];
+    const JP_REGION_MAP = {
+        'Hokkaido': '北海道地方',
+        'Aomori': '東北地方', 'Iwate': '東北地方', 'Miyagi': '東北地方',
+        'Akita': '東北地方', 'Yamagata': '東北地方', 'Fukushima': '東北地方',
+        'Ibaraki': '関東地方', 'Tochigi': '関東地方', 'Gunma': '関東地方',
+        'Saitama': '関東地方', 'Chiba': '関東地方', 'Tokyo': '関東地方', 'Kanagawa': '関東地方',
+        'Niigata': '中部地方', 'Toyama': '中部地方', 'Ishikawa': '中部地方',
+        'Fukui': '中部地方', 'Yamanashi': '中部地方', 'Nagano': '中部地方',
+        'Gifu': '中部地方', 'Shizuoka': '中部地方', 'Aichi': '中部地方',
+        'Mie': '近畿地方', 'Shiga': '近畿地方', 'Kyoto': '近畿地方',
+        'Osaka': '近畿地方', 'Hyogo': '近畿地方', 'Nara': '近畿地方', 'Wakayama': '近畿地方',
+        'Tottori': '中国地方', 'Shimane': '中国地方', 'Okayama': '中国地方',
+        'Hiroshima': '中国地方', 'Yamaguchi': '中国地方',
+        'Tokushima': '四国地方', 'Kagawa': '四国地方', 'Ehime': '四国地方', 'Kochi': '四国地方',
+        'Fukuoka': '九州・沖縄地方', 'Saga': '九州・沖縄地方', 'Nagasaki': '九州・沖縄地方',
+        'Kumamoto': '九州・沖縄地方', 'Oita': '九州・沖縄地方', 'Miyazaki': '九州・沖縄地方',
+        'Kagoshima': '九州・沖縄地方', 'Okinawa': '九州・沖縄地方',
+    };
+
+    function flag(c) {
+        if (!c || c.length !== 2) return '🌐';
+        return String.fromCodePoint(...c.toUpperCase().split('').map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65));
+    }
+    function v(x) { return (x != null && x !== '') ? x : '—'; }
+
+    async function pollUntilReady() {
+        while (true) {
+            try {
+                const s = await fetch('/api/city-explore/status').then(r => r.json());
+                document.getElementById('progressBar').style.width = s.progress + '%';
+                document.getElementById('loadingMsg').textContent = `GeoLite2-City をスキャン中... ${s.progress}%`;
+                if (s.ready) return;
+            } catch(e) {}
+            await new Promise(r => setTimeout(r, 800));
+        }
+    }
+
+    async function init() {
+        const status = await fetch('/api/city-explore/status').then(r => r.json()).catch(() => null);
+        if (status && !status.ready) {
+            await pollUntilReady();
+        }
+
+        const res = await fetch(`/api/city-explore/country/${code}`);
+        if (!res.ok) {
+            document.getElementById('loadingBlock').outerHTML =
+                `<div class="error-block">⚠️ 国コード「${code}」のデータが見つかりませんでした。<br><a href="/city-explore" style="color:#60a5fa;text-decoration:none;margin-top:10px;display:inline-block;">← 国一覧へ戻る</a></div>`;
+            return;
+        }
+        const data = await res.json();
+
+        document.title = `${data.name_ja} — 国別IP ブラウザ`;
+        document.getElementById('countryFlag').textContent = flag(code);
+        document.getElementById('countryTitle').textContent = data.name_ja;
+        document.getElementById('countryTitleEn').textContent = data.name_en;
+        document.getElementById('loadingBlock').style.display = 'none';
+
+        const totalIps = data.regions.reduce((s, r) => s + r.ips.length, 0);
+        document.getElementById('statBadge').textContent = `${data.regions.length} 地域 / ${totalIps} IP`;
+        document.getElementById('searchBox').disabled = false;
+
+        if (code === 'JP') {
+            renderJapan(data);
+        } else {
+            renderCountry(data);
+        }
+    }
+
+    const prefBlocks = [];
+
+    function renderJapan(data) {
+        const main = document.getElementById('main');
+        main.innerHTML = '';
+        prefBlocks.length = 0;
+
+        const groups = {};
+        for (const region of data.regions) {
+            const jpRegion = JP_REGION_MAP[region.name_en] || 'その他';
+            if (!groups[jpRegion]) groups[jpRegion] = [];
+            groups[jpRegion].push(region);
+        }
+
+        for (const regionName of JP_REGION_ORDER) {
+            const prefs = groups[regionName];
+            if (!prefs || prefs.length === 0) continue;
+
+            const divider = document.createElement('div');
+            divider.className = 'region-divider';
+            divider.innerHTML = `${regionName} <span class="region-divider-count">${prefs.length} 都道府県</span>`;
+            main.appendChild(divider);
+
+            for (const pref of prefs) {
+                main.appendChild(buildPrefBlock(pref, true));
+            }
+        }
+
+        setupSearch();
+    }
+
+    function renderCountry(data) {
+        const main = document.getElementById('main');
+        main.innerHTML = '';
+        prefBlocks.length = 0;
+        for (const region of data.regions) {
+            main.appendChild(buildPrefBlock(region, false));
+        }
+        setupSearch();
+    }
+
+    function buildPrefBlock(pref, isJapan) {
+        const block = document.createElement('div');
+        block.className = 'pref-block';
+
+        const header = document.createElement('div');
+        header.className = 'pref-row';
+
+        const showEn = pref.name_en && pref.name_en !== pref.name_ja && pref.name_en !== '(その他)';
+        header.innerHTML = `
+            <span class="p-arrow">▶</span>
+            <span class="p-name-ja">${pref.name_ja || pref.name_en}</span>
+            ${showEn ? `<span class="p-name-en">${pref.name_en}</span>` : ''}
+            <span class="p-spacer"></span>
+            <span class="p-badge">${pref.ips.length} IP</span>
+        `;
+
+        const body = document.createElement('div');
+        body.className = 'pref-body';
+
+        const pb = { pref, block, header, body, built: false, isJapan };
+
+        pb.buildIfNeeded = function() {
+            if (!pb.built) {
+                body.appendChild(buildTable(pref.ips, isJapan));
+                pb.built = true;
+            }
+        };
+
+        prefBlocks.push(pb);
+
+        header.addEventListener('click', () => {
+            const open = body.classList.toggle('open');
+            header.classList.toggle('open', open);
+            header.querySelector('.p-arrow').classList.toggle('open', open);
+            if (open) pb.buildIfNeeded();
+        });
+
+        block.appendChild(header);
+        block.appendChild(body);
+        return block;
+    }
+
+    let ipVerFilter = 'all';
+
+    function setVerFilter(v) {
+        ipVerFilter = v;
+        document.getElementById('fAll').className = 'ip-ver-btn' + (v === 'all' ? ' act-all' : '');
+        document.getElementById('fV4').className  = 'ip-ver-btn' + (v === 'v4'  ? ' act-v4'  : '');
+        document.getElementById('fV6').className  = 'ip-ver-btn' + (v === 'v6'  ? ' act-v6'  : '');
+        applyIpVerFilter();
+    }
+
+    function applyIpVerFilter() {
+        document.querySelectorAll('tbody tr').forEach(tr => {
+            if (ipVerFilter === 'all') tr.classList.remove('hidden-ver');
+            else tr.classList.toggle('hidden-ver', tr.dataset.ipver !== ipVerFilter);
+        });
+    }
+
+    function buildTable(ips, isJapan) {
+        const wrap = document.createElement('div');
+        wrap.className = 'table-wrap';
+
+        const table = document.createElement('table');
+        const showPref = !isJapan;
+        table.innerHTML = `<thead><tr>
+            <th>IPアドレス</th>
+            <th>都市（日本語）</th>
+            <th>都市（英語）</th>
+            ${showPref ? '<th>州・県</th>' : ''}
+            <th>郵便番号</th>
+            <th>座標</th>
+            <th>タイムゾーン</th>
+            <th>精度</th>
+            <th>ASN</th>
+            <th>組織・ISP</th>
+        </tr></thead>`;
+
+        const tbody = document.createElement('tbody');
+        for (const e of ips) {
+            const tr = document.createElement('tr');
+            const isV6 = e.ip.includes(':');
+            tr.dataset.ipver = isV6 ? 'v6' : 'v4';
+            const searchStr = [e.ip, e.city_ja, e.city_en, e.subdivision_ja,
+                e.subdivision_en, e.organization, e.asn, e.postal_code, e.time_zone]
+                .filter(Boolean).join(' ').toLowerCase();
+            tr.dataset.s = searchStr;
+
+            // Apply current version filter immediately
+            if (ipVerFilter !== 'all' && tr.dataset.ipver !== ipVerFilter) {
+                tr.classList.add('hidden-ver');
+            }
+
+            const coord = (e.latitude != null && e.longitude != null)
+                ? `${e.latitude.toFixed(4)}, ${e.longitude.toFixed(4)}` : '—';
+
+            tr.innerHTML = `
+                <td class="td-ip">${e.ip}${isV6 ? '<span class="badge-v6-small">IPv6</span>' : ''}</td>
+                <td class="td-city-ja">${v(e.city_ja)}</td>
+                <td class="td-city-en">${v(e.city_en)}</td>
+                ${showPref ? `<td class="td-pref">${v(e.subdivision_ja)}</td>` : ''}
+                <td class="td-post">${v(e.postal_code)}</td>
+                <td class="td-coord">${coord}</td>
+                <td class="td-tz">${v(e.time_zone)}</td>
+                <td class="td-acc">${e.accuracy_radius_km != null ? '±' + e.accuracy_radius_km + ' km' : '—'}</td>
+                <td class="td-asn">${v(e.asn)}</td>
+                <td class="td-org" title="${e.organization || ''}">${v(e.organization)}</td>
+            `;
+            tbody.appendChild(tr);
+        }
+        table.appendChild(tbody);
+        wrap.appendChild(table);
+        return wrap;
+    }
+
+    function ipSearchStr(e) {
+        return [e.ip, e.city_ja, e.city_en, e.subdivision_ja,
+            e.subdivision_en, e.organization, e.asn, e.postal_code, e.time_zone]
+            .filter(Boolean).join(' ').toLowerCase();
+    }
+
+    function removeIpBanner() {
+        const b = document.getElementById('ipLookupBanner');
+        if (b) b.remove();
+    }
+
+    async function lookupIpDirect(ip) {
+        removeIpBanner();
+        const main = document.getElementById('main');
+        const banner = document.createElement('div');
+        banner.id = 'ipLookupBanner';
+        banner.style.cssText = 'background:#0d1e35;border:1px solid #1e4a7a;border-radius:12px;padding:16px 20px;margin-bottom:20px;';
+        banner.innerHTML = `<div style="color:#64748b;font-size:0.82rem">🔍 <code style="font-family:monospace;color:#60a5fa">${ip}</code> を直接検索中...</div>`;
+        main.prepend(banner);
+
+        try {
+            const [detailRes, asnRes] = await Promise.allSettled([
+                fetch(`/api/check/detail/${encodeURIComponent(ip)}`).then(r => r.json()),
+                fetch(`/api/check/asn/${encodeURIComponent(ip)}`).then(r => r.json()),
+            ]);
+            const d = detailRes.status === 'fulfilled' ? detailRes.value : null;
+            const a = asnRes.status === 'fulfilled' ? asnRes.value : null;
+
+            if (!d || d.error) {
+                banner.innerHTML = `<div style="color:#fca5a5">⚠️ <code style="font-family:monospace">${ip}</code> — ${d?.error || '情報が見つかりませんでした'}</div>`;
+                return;
+            }
+
+            const coord = (d.latitude != null && d.longitude != null)
+                ? `${d.latitude.toFixed(4)}, ${d.longitude.toFixed(4)}` : '—';
+
+            function row(label, val) {
+                if (!val && val !== 0) return '';
+                return `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1e293b;gap:12px">
+                    <span style="color:#64748b;font-size:0.72rem;font-weight:700;text-transform:uppercase;letter-spacing:0.05em;white-space:nowrap">${label}</span>
+                    <span style="color:#e2e8f0;font-size:0.88rem;text-align:right;word-break:break-all">${val}</span>
+                </div>`;
+            }
+
+            banner.innerHTML = `
+                <div style="font-size:0.7rem;color:#60a5fa;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;margin-bottom:12px">
+                    🔍 直接 IP 検索結果 — <code style="font-family:monospace;font-size:0.9em">${ip}</code>
+                    <span style="color:#334155;font-weight:400;text-transform:none;letter-spacing:0">（このIPはサンプルデータに含まれていないため直接取得しました）</span>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 32px">
+                    <div>
+                        ${row('IPアドレス', `<code style="font-family:monospace;color:#60a5fa">${d.ip}</code>`)}
+                        ${row('国', `${d.country_name_ja || ''}${d.country_name_en ? ' / ' + d.country_name_en : ''}`)}
+                        ${row('都市（日本語）', d.city_name_ja)}
+                        ${row('都市（英語）', d.city_name_en)}
+                        ${row('州・県', d.subdivision_name_ja || d.subdivision_name_en)}
+                        ${row('郵便番号', d.postal_code)}
+                    </div>
+                    <div>
+                        ${row('座標', coord)}
+                        ${row('精度半径', d.accuracy_radius_km != null ? `±${d.accuracy_radius_km} km` : null)}
+                        ${row('タイムゾーン', d.time_zone)}
+                        ${row('AS番号', a && !a.error ? a.asn : null)}
+                        ${row('組織・ISP', a && !a.error ? a.organization : null)}
+                    </div>
+                </div>
+            `;
+        } catch(e) {
+            banner.innerHTML = `<div style="color:#fca5a5">⚠️ 検索エラー: ${e.message}</div>`;
+        }
+    }
+
+    function looksLikeIp(s) {
+        if (/^\d{1,3}(\.\d{1,3}){1,3}$/.test(s)) return true;
+        if (s.includes(':') && /^[0-9a-fA-F:]{2,39}$/.test(s)) return true;
+        return false;
+    }
+
+    function setupSearch() {
+        const box = document.getElementById('searchBox');
+        box.placeholder = 'IPv4/IPv6・都市・組織を検索...';
+        let ipTimer = null;
+
+        box.addEventListener('input', function() {
+            const q = this.value.trim();
+            const qL = q.toLowerCase();
+
+            clearTimeout(ipTimer);
+
+            if (!q) {
+                removeIpBanner();
+                prefBlocks.forEach(({block}) => block.classList.remove('hidden'));
+                document.querySelectorAll('tbody tr').forEach(tr => {
+                    tr.classList.remove('hidden-row', 'hl');
+                });
+                applyIpVerFilter(); // re-apply version filter after clearing search
+                return;
+            }
+
+            // Direct IP lookup (debounced) — works for both IPv4 and IPv6
+            if (looksLikeIp(q)) {
+                ipTimer = setTimeout(() => lookupIpDirect(q), 450);
+            } else {
+                removeIpBanner();
+            }
+
+            // Search sample data across all prefectures
+            for (const pb of prefBlocks) {
+                const hasMatch = pb.pref.ips.some(e => ipSearchStr(e).includes(qL));
+
+                if (hasMatch) {
+                    pb.buildIfNeeded();
+                    pb.body.classList.add('open');
+                    pb.header.classList.add('open');
+                    pb.header.querySelector('.p-arrow').classList.add('open');
+                    pb.block.classList.remove('hidden');
+
+                    pb.body.querySelectorAll('tbody tr').forEach(tr => {
+                        const match = tr.dataset.s && tr.dataset.s.includes(qL);
+                        tr.classList.toggle('hidden-row', !match);
+                        tr.classList.toggle('hl', match);
+                    });
+                } else {
+                    pb.block.classList.add('hidden');
+                }
+            }
+        });
+    }
+
+    init();
+</script>
+</body>
+</html>
